@@ -3,16 +3,29 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+// RADIO CONFIG
+#define RADIO_FREQUENCY   434501780UL
+#define RTTY
+//#define DOMINOEX
 
-#define TX_DELAY      300   // default was 300
+// RTTY CONFIG
+#define ASCII 7          // ASCII 7 or 8
+#define STOPBITS 2       // Either 1 or 2
+#define TXDELAY 0        // Delay between sentence TX's
+#define RTTY_BAUD 50     // Baud rate for RTTY 
 
+// POWER SAVING SETTING
+#define POWERSAVING      // Comment out to turn power saving off
+
+// BOARD SETTINGS
+#define STATUS_LED 4     // PAVA R9 Boards have an LED on PIN4
+#define GPS_ENABLE 3
 #define SHUTDOWN_SI406x_PIN   5
 #define AUDIO_PIN             6
-
-
-//#define VCXO_FREQ 26000000L
+#define BATTERY_ADC  A0
+#define SOLARPANEL_ADC  A1
 #define VCXO_FREQ 16369000L // pAVAR9 Crystal = 16.369 Mhz
-#define RADIO_FREQUENCY   434501780UL
+
 
 #endif
 

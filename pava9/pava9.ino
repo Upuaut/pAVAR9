@@ -40,15 +40,6 @@
 #include "config.h"
 #include "radio_si406x.h"
 
-/* CONFIGURABLE BITS */
-#define ASCII 7          // ASCII 7 or 8
-#define STOPBITS 2       // Either 1 or 2
-#define TXDELAY 0        // Delay between sentence TX's
-#define RTTY_BAUD 50     // Baud rate for RTTY 
-#define STATUS_LED 4     // PAVA R9 Boards have an LED on PIN4
-#define GPS_ENABLE 3
-#define POWERSAVING      // Comment out to turn power saving off
-
 uint8_t buf[60]; 
 char txstring[80];
 volatile int txstatus=1;
@@ -60,9 +51,9 @@ volatile int count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
-int navmode = 0, GPSerror = 0, lat_int=0,lon_int=0,txnulls=10;
+int navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
-int psm_status = 0;
+int psm_status = 0, batteryadc_v=0;
 int32_t tslf=0;
 int errorstatus=0; 
 /* Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
@@ -77,6 +68,7 @@ int errorstatus=0;
 void setup() {
   pinMode(STATUS_LED, OUTPUT); 
   pinMode(GPS_ENABLE,OUTPUT);
+  pinMode(BATTERY_ADC, INPUT);
   digitalWrite(GPS_ENABLE,LOW);
   blinkled(6);
   Serial.begin(9600);
@@ -97,10 +89,6 @@ void setup() {
   setupGPS();
   blinkled(1);
   initialise_interrupt();
-
-#ifdef POWERSAVING
-  ADCSRA = 0;
-#endif
 }
 
 void loop()
@@ -495,7 +483,7 @@ ISR(TIMER1_COMPA_vect)
       maxalt=alt;
     }
     lockvariables=1;
-    snprintf(txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,errorstatus);
+    snprintf(txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,batteryadc_v,errorstatus);
     snprintf(txstring,80, "%s*%04X\n", txstring, gps_CRC16_checksum(txstring));
     maxalt=0;
     lockvariables=0;
@@ -589,7 +577,9 @@ void prepare_data() {
   gps_check_lock();
   gps_get_position();
   gps_get_time();
+  batteryadc_v=analogRead(BATTERY_ADC);
 }
+
 void initialise_interrupt() 
 {
   // initialize Timer1
