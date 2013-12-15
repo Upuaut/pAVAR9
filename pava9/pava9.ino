@@ -1,26 +1,22 @@
 /*
- AVA 70cms Tracker
+ PAVA R9 Tracker Code
+ SI4060 Based RF Module
  
  By Anthony Stirk M0UPU 
  
- October 2012 Version 3
- Subversion 3.35 FLIGHT READY
+ December 2013
+ Subversion 1.00 (Initial Commit)
  
  Thanks and credits :
  
- Interrupt Driven RTTY Code :
- Evolved from Rob Harrison's RTTY Code.
- Thanks to : 
- http://www.engblaze.com/microcontroller-tutorial-avr-and-arduino-timer-interrupts/
- http://gammon.com.au/power
- Suggestion to use Frequency Shift Registers by Dave Akerman (Daveake)/Richard Cresswell (Navrac)
- Suggestion to lock variables when making the telemetry string & Compare match register calculation from Phil Heron.
- 
- RFM22B Code from James Coxon http://ukhas.org.uk/guides:rfm22b 
- 
  GPS Code from jonsowman and Joey flight computer CUSF
  https://github.com/cuspaceflight/joey-m/tree/master/firmware
- Big thanks to Dave Akerman!
+
+ SI4060 Code Code modified by Ara Kourchians for the Si406x originally based on
+ KT5TK's Si446x code. 
+
+ Big thanks to Dave Akerman, Phil Heron, Mark Jessop, Leo Bodnar for suggestions
+ ideas and assistance. 
  
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -43,27 +39,14 @@
 
 #include "config.h"
 #include "radio_si406x.h"
+
 /* CONFIGURABLE BITS */
 #define ASCII 7          // ASCII 7 or 8
 #define STOPBITS 2       // Either 1 or 2
 #define TXDELAY 0        // Delay between sentence TX's
-#define RTTY_BAUD 50     // Baud rate for use with RFM22B Max = 600
-#define RADIO_FREQUENCY 434.550 // 434.550 Reality 
-#define RADIO_POWER  0x04
-#define RADIO_REBOOT 20  // Reboot Radio every X telemetry lines
-#define APRS_TX_INTERVAL  120000  // APRS TX Interval 
-
-/*
- 0x02  5db (3mW)
- 0x03  8db (6mW)
- 0x04 11db (12mW)
- 0x05 14db (25mW)
- 0x06 17db (50mW)
- 0x07 20db (100mW)
- */
-
-#define STATUS_LED 4            // PAVA R7 Boards have an LED on PIN4
-
+#define RTTY_BAUD 50     // Baud rate for RTTY 
+#define STATUS_LED 4     // PAVA R9 Boards have an LED on PIN4
+#define GPS_ENABLE 3
 #define POWERSAVING      // Comment out to turn power saving off
 
 uint8_t buf[60]; 
@@ -77,15 +60,14 @@ volatile int count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
-int navmode = 0, battv=0, rawbattv=0, GPSerror = 0, lat_int=0,lon_int=0,txnulls=10;
-int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0, battvaverage=0;
-int psm_status = 0, radiostatus=0, countreset=0, aprs_attempts=0, aprs_tx_status=0;
-unsigned long aprs_startTime;
+int navmode = 0, GPSerror = 0, lat_int=0,lon_int=0,txnulls=10;
+int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
+int psm_status = 0;
 int32_t tslf=0;
 int errorstatus=0; 
 /* Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
  Bit 1 = GPS Error Condition Noted Cold Boot GPS
- Bit 2 = RFM22B Error Condition Noted, RFM22B Power Cycled
+ Bit 2 = Reserved
  Bit 3 = Current Dynamic Model 0 = Flight 1 = Pedestrian
  Bit 4 = PSM Status 0 = PSM On 1 = PSM Off                   
  Bit 5 = Lock 0 = GPS Locked 1= Not Locked
@@ -94,24 +76,22 @@ int errorstatus=0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT); 
-  pinMode(3,OUTPUT);
-  digitalWrite(3,LOW);
-//  blinkled(6);
+  pinMode(GPS_ENABLE,OUTPUT);
+  digitalWrite(GPS_ENABLE,LOW);
+  blinkled(6);
   Serial.begin(9600);
-//  blinkled(5);
+  blinkled(5);
   resetGPS();
-//  blinkled(4);
+  blinkled(4);
   wait(500);
- // blinkled(3);
+  blinkled(3);
   pinMode(SHUTDOWN_SI406x_PIN, OUTPUT);
   digitalWrite(SHUTDOWN_SI406x_PIN, LOW);
-//  blinkled(2);
+  blinkled(2);
   wait(500);
-//  blinkled(5);
+  blinkled(1);
   startup();
-
   ptt_on();
-
   analogWrite(AUDIO_PIN, 127);
   blinkled(2);
   setupGPS();
@@ -425,9 +405,9 @@ void gps_get_position()
 if(GPSerror == 0) {
     if(sats<4)
     {
-      lat=0;
-      lon=0;
-      alt=0;
+      lat=0; // This just stops garbage location data from the Ublox. 
+      lon=0; // If I don't know where I am don't make it up.
+      alt=0; 
     }
     else
     {
@@ -438,15 +418,10 @@ if(GPSerror == 0) {
       alt = (int32_t)buf[22] | (int32_t)buf[23] << 8 | 
         (int32_t)buf[24] << 16 | (int32_t)buf[25] << 24;
     }
-    // 4 bytes of latitude/longitude (1e-7)
     lon_int=abs(lon/10000000);
-    lon_dec=(labs(lon) % 10000000)/100;
+    lon_dec=(labs(lon) % 10000000)/100; // Report to 5 decimal places
     lat_int=abs(lat/10000000);
-    lat_dec=(labs(lat) % 10000000)/100;
-
-
-    // 4 bytes of altitude above MSL (mm)
-
+    lat_dec=(labs(lat) % 10000000)/100; // If you change this don't for get to amend the padding in the snprintf line.
     alt /= 1000; // Correct to meters
   }
 
@@ -475,7 +450,7 @@ void gps_get_time()
   }
 
   if(GPSerror == 0) {
-    if(hour > 23 || minute > 59 || second > 59)
+    if(buf[22] > 23 || buf[23] > 59 || buf[24] > 59)
     {
       GPSerror = 34;
     }
@@ -520,9 +495,8 @@ ISR(TIMER1_COMPA_vect)
       maxalt=alt;
     }
     lockvariables=1;
-    sprintf(txstring, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,errorstatus);
-    //      sprintf(txstring, "%s,%c%c,%i",txstring,comment[0]==' ' ? '-' : comment[0],comment[1]==' ' ? '-' : comment[1],aprs_attempts);
-    sprintf(txstring, "%s*%04X\n", txstring, gps_CRC16_checksum(txstring));
+    snprintf(txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,errorstatus);
+    snprintf(txstring,80, "%s*%04X\n", txstring, gps_CRC16_checksum(txstring));
     maxalt=0;
     lockvariables=0;
     txstringlength=strlen(txstring);
