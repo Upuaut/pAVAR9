@@ -64,32 +64,41 @@ int errorstatus=0;
  Bit 5 = Lock 0 = GPS Locked 1= Not Locked
  */
 
+char debug_count = 0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT); 
-  pinMode(BATTERY_ADC, INPUT);
+  pinMode(4,OUTPUT);
+  digitalWrite(4,LOW);
+  
+  pinMode(AUDIO_PIN, OUTPUT);
+  digitalWrite(AUDIO_PIN, LOW);
+  
+  Serial.begin(9600);
+  wait(500);
+
   pinMode(SHUTDOWN_SI406x_PIN, OUTPUT);
   digitalWrite(SHUTDOWN_SI406x_PIN, LOW);
-  blinkled(2);
-  wait(500);
-  blinkled(1);
+  
   startup();
   ptt_on();
-  analogWrite(AUDIO_PIN, 127);
+  
+  digitalWrite(AUDIO_PIN, HIGH);
+  ptt_off();
 }
 
 void loop()
 {
-  setChannel(0);
-  start_tx();
-  delay(250);
-  stop_tx();
-  delay(50);
-  setChannel(2);
-  start_tx();
-  delay(250);
-  stop_tx();
-  delay(50);
+  if(debug_count < 16)
+  {
+    setChannel(debug_count);
+    wait(50);
+    debug_count++;
+  }
+  else
+  {
+    debug_count = 0;  
+  }
 }
 
 
