@@ -35,11 +35,13 @@
 #include <avr/interrupt.h>
 #include <util/crc16.h>
 #include <SPI.h>
+#include "dominoexvaricode.h"
 #define F_CPU 2000000
 
 #include "config.h"
 #include "radio_si406x.h"
-
+static char _txstring[120];
+static volatile char _txstatus = 0;
 uint8_t buf[60]; 
 char txstring[80];
 volatile int txstatus=1;
@@ -85,20 +87,17 @@ void setup() {
   
   digitalWrite(AUDIO_PIN, HIGH);
   ptt_off();
+  initialise_interrupt();
 }
 
 void loop()
 {
-  if(debug_count < 16)
-  {
-    setChannel(debug_count);
-    wait(50);
-    debug_count++;
-  }
-  else
-  {
-    debug_count = 0;  
-  }
+	/* wait for the modem to finish */
+	while(_txstatus);
+	
+	/* Transmit a string */
+	snprintf(_txstring, 100, "THIS IS JUST A TEST\n");
+	_txstatus = 1;
 }
 
 
@@ -118,4 +117,76 @@ void wait(unsigned long delaytime) // Arduino Delay doesn't get CPU Speeds below
   while((_delaytime+delaytime)>=millis()){
   }
 }
+void initialise_interrupt() 
+{
+	// initialize Timer1
+	cli();          // disable global interrupts
+	TCCR1A = 0;     // set entire TCCR1A register to 0
+	TCCR1B = 0;     // same for TCCR1B
+	//  OCR1A = F_CPU / 1024 / BAUDRATE - 1;  // set compare match register to desired timer count:
+	OCR1A = F_CPU/16000-1; // DOMINOEX16
+//	OCR1A = F_CPU/22050-1; // DOMINOEX22
+//	OCR1A = F_CPU/8000-1; // DOMINOEX8
+//	OCR1A = F_CPU/4000-1; // DOMINOEX4
+	TCCR1B |= (1 << WGM12);   // turn on CTC mode:
+	// Set CS10 and CS12 bits for:
+	TCCR1B |= (1 << CS10);
+	TCCR1B |= (1 << CS12);
+	// enable timer compare interrupt:
+	TIMSK1 |= (1 << OCIE1A);
+	sei();          // enable global interrupts
+}
 
+ISR(TIMER1_COMPA_vect)
+{
+      //  digitalWrite(STATUSLED, !digitalRead(STATUSLED)); 
+        static uint8_t sym = 0;  /* Currently transmitting symbol */
+	static uint8_t c = 0x00; /* Current character */
+	static uint8_t s = 0;    /* Current symbol index */
+	static char *p = 0;      /* Pointer to primary tx buffer */
+	
+	uint8_t nsym;
+	uint8_t dacbuf[3];
+	uint16_t dacval;
+	
+	/* Fetch the next symbol */
+	nsym = varicode[c][s++];
+	
+	/* Update the transmitting symbol */
+	sym = (sym + 2 + nsym) % 18;
+	
+
+        setChannel(sym);
+	
+	/* Check if this character has less than 3 symbols */
+	if(s < 3 && !(varicode[c][s] & 0x08)) s = 3;
+	
+	/* Still more symbols to send? Exit interrupt */
+	if(s != 3) return;
+	
+	/* We're done with this character, fetch the next one */
+	s = 0;
+	
+	switch(_txstatus)
+	{
+	case 0:
+		/* Nothing is ready for us, transmit a NUL */
+		c = 0x00;
+		break;
+	
+	case 1:
+		/* 1 signals a new primary string is ready */
+		p = _txstring;
+		_txstatus++;
+		/* Fall through... */
+	
+	case 2:
+		/* Read the next character from the primary buffer */
+		c = (uint8_t) *(p++);
+		
+		/* Reached the end of the string? */
+		if(c == 0x00) _txstatus = 0;
+		
+		break;
+	}
+}

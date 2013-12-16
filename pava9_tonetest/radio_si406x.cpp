@@ -120,7 +120,7 @@ void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pDat
     }
        
     digitalWrite(SSpin,HIGH);
-    delay(50); // Don't wait too long now...
+    delay(64); // Don't wait too long now...
 }
 
 
@@ -235,7 +235,7 @@ void setFrequency(unsigned long freq)
   
 // Set the step size
   unsigned char size_1 = 0x00;
-  unsigned char size_0 = 0x0F;
+  unsigned char size_0 = 0x02;
   
   // assemble parameter string
   char set_frequency_property_command[] = {0x11, 0x40, 0x06, 0x00, n, m2, m1, m0, size_1, size_0};
