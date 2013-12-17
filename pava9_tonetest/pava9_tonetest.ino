@@ -80,8 +80,9 @@ void setup() {
   wait(500);
 
   pinMode(SHUTDOWN_SI406x_PIN, OUTPUT);
+  digitalWrite(SHUTDOWN_SI406x_PIN, HIGH);
+  delay(100);
   digitalWrite(SHUTDOWN_SI406x_PIN, LOW);
-  
   startup();
   ptt_on();
   
@@ -96,7 +97,7 @@ void loop()
 	while(_txstatus);
 	
 	/* Transmit a string */
-	snprintf(_txstring, 100, "THIS IS JUST A TEST\n");
+	snprintf(_txstring, 100, "ALL WORK AND NO PLAY MAKE JACK A DULL BOY\n");
 	_txstatus = 1;
 }
 

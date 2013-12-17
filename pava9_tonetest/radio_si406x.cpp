@@ -120,7 +120,7 @@ void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pDat
     }
        
     digitalWrite(SSpin,HIGH);
-    delay(64); // Don't wait too long now...
+    _delay_ms(1); // Don't wait too long now...
 }
 
 
@@ -251,16 +251,25 @@ void setFrequency(unsigned long freq)
 
 void setChannel(unsigned char channel)
 {
+  char change_state_command[] = {0x34, 0x03}; //  Change to Ready state
+  SendCmdReceiveAnswerFast(2, 1, change_state_command);
+  
+  //const char get_int_status_command[] = {0x20, 0x00, 0x00, 0x00}; //  Clear all pending interrupts and get the interrupt status back
+  //SendCmdReceiveAnswerFast(4, 9, get_int_status_command);
+  
   // Set Channel
   char set_channel_command[] = {0x31, channel, 0x23,0x00,0x00}; //0x23
   // send parameters
-  SendCmdReceiveAnswerFast(5, 1, set_channel_command);  
-
-  char change_tune_state_command[] = {0x34, 0x05}; //  Change to TX tune state
-  SendCmdReceiveAnswerFast(2, 1, change_tune_state_command);
+  SendCmdReceiveAnswerFast(5, 1, set_channel_command); 
   
-  char change_state_command[] = {0x34, 0x03}; //  Change to Ready state
-  SendCmdReceiveAnswerFast(2, 1, change_state_command);
+
+  //char change_tune_state_command[] = {0x34, 0x05}; //  Change to TX tune state
+  //SendCmdReceiveAnswerFast(2, 1, change_tune_state_command);
+
+  
+  
+  //char change_start_state_command[] = {0x34, 0x07}; //  Change to TX state
+  //SendCmdReceiveAnswerFast(2, 1, change_start_state_command);
 }
 
 // Public functions -----------------------------------------------------------
