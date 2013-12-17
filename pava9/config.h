@@ -11,7 +11,7 @@
 // RTTY CONFIG
 #define ASCII 7          // ASCII 7 or 8
 #define STOPBITS 2       // Either 1 or 2
-#define TXDELAY 0        // Delay between sentence TX's
+#define TXDELAY  0
 #define RTTY_BAUD 50     // Baud rate for RTTY 
 
 // POWER SAVING SETTING
@@ -25,7 +25,7 @@
 #define BATTERY_ADC  A0
 #define SOLARPANEL_ADC  A1
 #define VCXO_FREQ 16369000L // pAVAR9 Crystal = 16.369 Mhz
-
+#define F_CPU 2000000
 
 #endif
 

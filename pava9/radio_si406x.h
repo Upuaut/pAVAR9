@@ -30,12 +30,13 @@
   int get_powerlevel();
   
   void SendCmdReceiveAnswer(int byteCountTx, int byteCountRx, const char* pData);
+  void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pData);
   void resetradio(void);
   void setModem(void);
   void start_tx(void);
   void stop_tx(void);
   void tune_tx(void);
-  void setFrequency(unsigned long freq, unsigned long step_size_hz); 
+  void setFrequency(unsigned long freq); 
   void setChannel(unsigned char channel);
   
   #define SCKpin  13   // SCK

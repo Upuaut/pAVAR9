@@ -5,16 +5,16 @@
  By Anthony Stirk M0UPU 
  
  December 2013
- Subversion 1.00 (Initial Commit)
+ Subversion 1.05 (Initial Commit)
  
  Thanks and credits :
  
  GPS Code from jonsowman and Joey flight computer CUSF
  https://github.com/cuspaceflight/joey-m/tree/master/firmware
-
+ 
  SI4060 Code Code modified by Ara Kourchians for the Si406x originally based on
  KT5TK's Si446x code. 
-
+ 
  Big thanks to Dave Akerman, Phil Heron, Mark Jessop, Leo Bodnar for suggestions
  ideas and assistance. 
  
@@ -35,10 +35,13 @@
 #include <avr/interrupt.h>
 #include <util/crc16.h>
 #include <SPI.h>
-#define F_CPU 2000000
 
 #include "config.h"
 #include "radio_si406x.h"
+
+#ifdef DOMINOEX
+#include "dominoexvaricode.h"
+#endif
 
 uint8_t buf[60]; 
 char txstring[80];
@@ -164,7 +167,7 @@ void setupGPS() {
   //Turning off all GPS NMEA strings apart on the uBlox module
   // Taken from Project Swift (rather than the old way of sending ascii text)
   uint8_t setNMEAoff[] = {
-    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                        };
+    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                            };
   sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
   wait(500);
   setGPS_DynamicModel6();
@@ -184,7 +187,7 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 uint8_t gps_check_nav(void)
 {
   uint8_t request[8] = {
-    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                           };
+    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                               };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -304,7 +307,7 @@ void gps_check_lock()
   // Construct the request to the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x06, 0x00, 0x00,
-    0x07, 0x16                                                                                                                                  };
+    0x07, 0x16                                                                                                                                      };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -344,7 +347,7 @@ void setGPS_DynamicModel6()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                           };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                               };
   while(!gps_set_sucess)
   {
     sendUBX(setdm6, sizeof(setdm6)/sizeof(uint8_t));
@@ -360,7 +363,7 @@ void setGPS_DynamicModel3()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                           };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                               };
   while(!gps_set_sucess)
   {
     sendUBX(setdm3, sizeof(setdm3)/sizeof(uint8_t));
@@ -374,7 +377,7 @@ void gps_get_position()
   // Request a NAV-POSLLH message from the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x02, 0x00, 0x00, 0x03,
-    0x0A                                                                                                                              };
+    0x0A                                                                                                                                  };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -390,7 +393,7 @@ void gps_get_position()
     GPSerror = 23;
   }
 
-if(GPSerror == 0) {
+  if(GPSerror == 0) {
     if(sats<4)
     {
       lat=0; // This just stops garbage location data from the Ublox. 
@@ -421,7 +424,7 @@ void gps_get_time()
   // Send a NAV-TIMEUTC message to the receiver
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x21, 0x00, 0x00,
-    0x22, 0x67                                                                                                                            };
+    0x22, 0x67                                                                                                                                };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -466,7 +469,7 @@ uint16_t gps_CRC16_checksum (char *string)
 
   return crc;
 }
-
+#ifdef RTTY
 ISR(TIMER1_COMPA_vect)
 {
   switch(txstatus) {
@@ -544,31 +547,31 @@ void rtty_txbit (int bit)
 {
   if (bit)
   {
-     digitalWrite(AUDIO_PIN, HIGH);
+    digitalWrite(AUDIO_PIN, HIGH);
   }
   else
   {
-       digitalWrite(AUDIO_PIN, LOW);
+    digitalWrite(AUDIO_PIN, LOW);
   }
 }
-
+#endif
 
 void setGPS_PowerSaveMode() {
   // Power Save Mode 
   uint8_t setPSM[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                           }; // Setup for Power Save Mode (Default Cyclic 1s)
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                               }; // Setup for Power Save Mode (Default Cyclic 1s)
   sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
 }
 
 void setGps_MaxPerformanceMode() {
   //Set GPS for Max Performance Mode
   uint8_t setMax[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                           }; // Setup for Max Power Mode
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                               }; // Setup for Max Power Mode
   sendUBX(setMax, sizeof(setMax)/sizeof(uint8_t));
 }
 void resetGPS() {
   uint8_t set_reset[] = {
-    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                 };
+    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                     };
   sendUBX(set_reset, sizeof(set_reset)/sizeof(uint8_t));
 }
 
@@ -632,6 +635,8 @@ void checkDynamicModel() {
     }
   }
 }
+
+
 
 
 

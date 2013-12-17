@@ -87,7 +87,47 @@ void SendCmdReceiveAnswer(int byteCountTx, int byteCountRx, const char* pData)
     _delay_ms(500); // Wait half a second to prevent Serial buffer overflow
 }
 
+void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pData)
+{
+    if (byteCountTx == 1)
+        byteCountTx++;
+    
+    digitalWrite(SSpin,LOW);
+    char answer;   
+    
+    
+    for (int j = 0; j < byteCountTx; j++) // Loop through the bytes of the pData
+    {
+      byte wordb = pData[j];
+      SPI.transfer(wordb);  
+    } 
+    
+    digitalWrite(SSpin,HIGH);
 
+    _delay_us(20);
+
+    digitalWrite(SSpin,LOW);   
+    
+    int reply = 0x00;
+    while (reply != 0xFF)
+    {       
+       reply = SPI.transfer(0x44);
+       if (reply != 0xFF)
+       {
+         digitalWrite(SSpin,HIGH);
+         _delay_us(20);
+         digitalWrite(SSpin,LOW);   
+       }
+    }
+    
+    for (int k = 1; k < byteCountRx; k++)
+    {
+      SPI.transfer(0x44);
+    }
+       
+    digitalWrite(SSpin,HIGH);
+    delay(50); // Don't wait too long now...
+}
 // Config reset ----------------------------------------------------------
 void resetradio(void) 
 {
@@ -116,7 +156,7 @@ void resetradio(void)
   SendCmdReceiveAnswer(8, 8, gpio_pin_cfg_command);
 
 // Set Frequency  
-  setFrequency(active_freq,20);
+  setFrequency(active_freq);
 
 // Set to CW mode 
   setModem(); 
@@ -162,7 +202,7 @@ void setModem()
 
 
 
-void setFrequency(unsigned long freq, unsigned long step_size_hz)
+void setFrequency(unsigned long freq)
 { 
   
   // Set the output divider according to recommended ranges given in si406x datasheet  
@@ -196,20 +236,18 @@ void setFrequency(unsigned long freq, unsigned long step_size_hz)
   unsigned int m2 = m / 0x10000;
   unsigned int m1 = (m - m2 * 0x10000) / 0x100;
   unsigned int m0 = (m - m2 * 0x10000 - m1 * 0x100); 
-
-
-// Set step size
-  unsigned long step_size = (524288UL*outdiv*step_size_hz)/(2*VCXO_FREQ);
-  unsigned char step1 = (unsigned char)((step_size << 8) >> 8);
-  unsigned char step0 = (unsigned char)(step_size >> 8);
-
+  
+// Set the step size
+  unsigned char size_1 = 0x00;
+  unsigned char size_0 = 0x02;
+  
   // assemble parameter string
-  char set_frequency_property_command[] = {0x11, 0x40, 0x06, 0x00, n, m2, m1, m0, step1, step0};
+  char set_frequency_property_command[] = {0x11, 0x40, 0x06, 0x00, n, m2, m1, m0, size_1, size_0};
   // send parameters
   SendCmdReceiveAnswer(10, 1, set_frequency_property_command);
   
 // Set frequency deviation
-  char set_frequency_separation[] = {0x11, 0x20, 0x03, 0x0a, 0x00, 0x00, 0x22}; // Controls RTTY Shift
+  char set_frequency_separation[] = {0x11, 0x20, 0x03, 0x0a, 0x00, 0x00, 0x22};
   // send parameters
   SendCmdReceiveAnswer(7, 1, set_frequency_separation);
 
@@ -217,10 +255,16 @@ void setFrequency(unsigned long freq, unsigned long step_size_hz)
 
 void setChannel(unsigned char channel)
 {
-// Set Channel
-  char set_channel_command[] = {0x31, 0x01, 0x01, channel};
+  // Set Channel
+  char set_channel_command[] = {0x31, channel, 0x23,0x00,0x00}; //0x23
   // send parameters
-  SendCmdReceiveAnswer(4, 1, set_channel_command);
+  SendCmdReceiveAnswerFast(5, 1, set_channel_command);  
+
+  char change_tune_state_command[] = {0x34, 0x05}; //  Change to TX tune state
+  SendCmdReceiveAnswerFast(2, 1, change_tune_state_command);
+  
+  char change_state_command[] = {0x34, 0x03}; //  Change to Ready state
+  SendCmdReceiveAnswerFast(2, 1, change_state_command);
 }
 
 
