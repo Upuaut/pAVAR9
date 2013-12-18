@@ -20,7 +20,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-
 #include "config.h"
 #include <math.h>
 #include "radio_si406x.h"
@@ -34,10 +33,8 @@
 #include <WProgram.h>
 #endif
 
-
 unsigned int si406x_powerlevel = 0;
 unsigned long active_freq = RADIO_FREQUENCY;
-
 
 void SendCmdReceiveAnswer(int byteCountTx, int byteCountRx, const char* pData)
 {

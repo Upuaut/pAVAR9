@@ -20,7 +20,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#define STATUS_LED 4 
 #include "config.h"
 #include <math.h>
 #include "radio_si406x.h"
@@ -34,16 +33,12 @@
 #include <WProgram.h>
 #endif
 
-
 unsigned int si406x_powerlevel = 0;
 unsigned long active_freq = RADIO_FREQUENCY;
 
-
 void SendCmdReceiveAnswer(int byteCountTx, int byteCountRx, const char* pData)
 {
-    
-
-  if (byteCountTx == 1)
+    if (byteCountTx == 1)
         byteCountTx++;
     
     digitalWrite(SSpin,LOW);
@@ -58,26 +53,22 @@ void SendCmdReceiveAnswer(int byteCountTx, int byteCountRx, const char* pData)
     
     digitalWrite(SSpin,HIGH);
 
-
     _delay_us(20);
 
     digitalWrite(SSpin,LOW);   
     
     int reply = 0x00;
-
     while (reply != 0xFF)
-    {  
-
+    {       
        reply = SPI.transfer(0x44);
        if (reply != 0xFF)
        {
-//         digitalWrite(STATUS_LED,LOW);
          digitalWrite(SSpin,HIGH);
          _delay_us(20);
          digitalWrite(SSpin,LOW);   
-  //       digitalWrite(STATUS_LED,HIGH);     
        }
     }
+    
     for (int k = 1; k < byteCountRx; k++)
     {
       SPI.transfer(0x44);
@@ -126,8 +117,10 @@ void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pDat
     }
        
     digitalWrite(SSpin,HIGH);
-    delay(50); // Don't wait too long now...
+    _delay_ms(1); // Don't wait too long now...
 }
+
+
 // Config reset ----------------------------------------------------------
 void resetradio(void) 
 {
@@ -247,7 +240,7 @@ void setFrequency(unsigned long freq)
   SendCmdReceiveAnswer(10, 1, set_frequency_property_command);
   
 // Set frequency deviation
-  char set_frequency_separation[] = {0x11, 0x20, 0x03, 0x0a, 0x00, 0x00, 0x22};
+  char set_frequency_separation[] = {0x11, 0x20, 0x03, 0x0a, 0x00, 0x00, 0x22}; // 0x22 sets RTTY shift at about 450
   // send parameters
   SendCmdReceiveAnswer(7, 1, set_frequency_separation);
 
@@ -255,18 +248,26 @@ void setFrequency(unsigned long freq)
 
 void setChannel(unsigned char channel)
 {
+  char change_state_command[] = {0x34, 0x03}; //  Change to Ready state
+  SendCmdReceiveAnswerFast(2, 1, change_state_command);
+  
+  //const char get_int_status_command[] = {0x20, 0x00, 0x00, 0x00}; //  Clear all pending interrupts and get the interrupt status back
+  //SendCmdReceiveAnswerFast(4, 9, get_int_status_command);
+  
   // Set Channel
   char set_channel_command[] = {0x31, channel, 0x23,0x00,0x00}; //0x23
   // send parameters
-  SendCmdReceiveAnswerFast(5, 1, set_channel_command);  
-
-  char change_tune_state_command[] = {0x34, 0x05}; //  Change to TX tune state
-  SendCmdReceiveAnswerFast(2, 1, change_tune_state_command);
+  SendCmdReceiveAnswerFast(5, 1, set_channel_command); 
   
-  char change_state_command[] = {0x34, 0x03}; //  Change to Ready state
-  SendCmdReceiveAnswerFast(2, 1, change_state_command);
-}
 
+  //char change_tune_state_command[] = {0x34, 0x05}; //  Change to TX tune state
+  //SendCmdReceiveAnswerFast(2, 1, change_tune_state_command);
+
+  
+  
+  //char change_start_state_command[] = {0x34, 0x07}; //  Change to TX state
+  //SendCmdReceiveAnswerFast(2, 1, change_start_state_command);
+}
 
 // Public functions -----------------------------------------------------------
 
@@ -280,6 +281,7 @@ void startup()
   pinMode(SSpin,   OUTPUT);
   pinMode(MOSIpin, OUTPUT);
   pinMode(MISOpin, INPUT_PULLUP);
+  
   digitalWrite(SSpin, HIGH);  // ensure SS stays high for now
   
   // initialize SPI:
@@ -293,9 +295,7 @@ void startup()
 
 void ptt_on()
 {
-  
   resetradio();
-  
   // turn on the blue LED (GPIO2) to indicate TX
   char gpio_pin_cfg_command2[] = {0x13, 0x02, 0x03, 0x03, 0x02, 0x08, 0x11, 0x00}; //  Set GPIO2 HIGH; Link NIRQ to CTS; Link SDO to MISO; Max drive strength
   SendCmdReceiveAnswer(8, 1, gpio_pin_cfg_command2);

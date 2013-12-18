@@ -5,8 +5,8 @@
 
 // RADIO CONFIG
 #define RADIO_FREQUENCY   434501780UL
-#define RTTY
-//#define DOMINOEX
+//#define RTTY
+#define DOMINOEX
 
 // RTTY CONFIG
 #define ASCII 7          // ASCII 7 or 8

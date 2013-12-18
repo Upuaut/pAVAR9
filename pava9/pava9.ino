@@ -44,9 +44,9 @@
 #endif
 
 uint8_t buf[60]; 
-char txstring[80];
-volatile int txstatus=1;
-volatile int txstringlength=0;
+char _txstring[80];
+volatile int _txstatus=0;
+volatile int _txstringlength=0;
 volatile char txc;
 volatile int txi;
 volatile int txj;
@@ -77,98 +77,131 @@ void setup() {
   Serial.begin(9600);
   blinkled(5);
   resetGPS();
+  setupGPS();
   blinkled(4);
   wait(500);
   blinkled(3);
   pinMode(SHUTDOWN_SI406x_PIN, OUTPUT);
+  digitalWrite(SHUTDOWN_SI406x_PIN, HIGH);
+  delay(100);
   digitalWrite(SHUTDOWN_SI406x_PIN, LOW);
   blinkled(2);
-  wait(500);
-  blinkled(1);
   startup();
   ptt_on();
+#ifdef RTTY
   analogWrite(AUDIO_PIN, 127);
+#endif
+#ifdef DOMINOEX
+  digitalWrite(AUDIO_PIN, HIGH);
+  ptt_off();
+#endif
   blinkled(2);
-  setupGPS();
   blinkled(1);
   initialise_interrupt();
 }
 
 void loop()
 {
+  while(_txstatus);
+
+  /* Transmit a string */
+  snprintf(_txstring, 100, "ALL WORK AND NO PLAY MAKE JACK A DULL BOY\n");
+  _txstatus = 1;
+
+  /*
   oldhour=hour;
-  oldminute=minute;
-  oldsecond=second;
-  gps_check_nav();
-
-  if(lock!=3) // Blink LED to indicate no lock
-  {
-    digitalWrite(STATUS_LED, HIGH);   
-    wait(750);               
-    digitalWrite(STATUS_LED, LOW); 
-    errorstatus |=(1 << 5);     
-  }
-  else
-  {
-    errorstatus &= ~(1 << 5);
-  }
-  checkDynamicModel();
-#ifdef POWERSAVING
-  if((lock==3) && (psm_status==0) && (sats>=5) &&((errorstatus & (1 << 0))==0)&&((errorstatus & (1 << 1))==0))
-  {
-    setGPS_PowerSaveMode();
-    wait(1000);
-    pinMode(STATUS_LED, INPUT); 
-    psm_status=1;
-    errorstatus &= ~(1 << 4);
-  }
-#endif
-
-  if(!lockvariables) {
-
-    prepare_data();
-    if(alt>maxalt && sats >= 4)
-    {
-      maxalt=alt;
-    }
-
-    if((oldhour==hour&&oldminute==minute&&oldsecond==second)||sats<=4) {
-      tslf++;
-    }
-    else
-    {
-      tslf=0;
-      errorstatus &= ~(1 << 0);
-      errorstatus &= ~(1 << 1);
-    }
-    if((tslf>10 && ((errorstatus & (1 << 0))==0)&&((errorstatus & (1 << 1))==0))) {
-      setupGPS();
-      wait(125);
-      setGps_MaxPerformanceMode();
-      wait(125);
-      //    errorstatus=1;
-      errorstatus |=(1 << 0);
-      psm_status=0;
-      errorstatus |=(1 << 4); 
-    }
-    if(tslf>100 && ((errorstatus & (1 << 0))==1)&&((errorstatus & (1 << 1))==0)) {
-      errorstatus |=(1 << 0);
-      errorstatus |=(1 << 1);
-      Serial.flush();
-      resetGPS();
-      wait(125);
-      setupGPS();
-    }
-  }
-
-}    
+   oldminute=minute;
+   oldsecond=second;
+   gps_check_nav();
+   
+   if(lock!=3) // Blink LED to indicate no lock
+   {
+   digitalWrite(STATUS_LED, HIGH);   
+   wait(750);               
+   digitalWrite(STATUS_LED, LOW); 
+   errorstatus |=(1 << 5);     
+   }
+   else
+   {
+   errorstatus &= ~(1 << 5);
+   }
+   checkDynamicModel();
+   #ifdef POWERSAVING
+   if((lock==3) && (psm_status==0) && (sats>=5) &&((errorstatus & (1 << 0))==0)&&((errorstatus & (1 << 1))==0))
+   {
+   setGPS_PowerSaveMode();
+   wait(1000);
+   pinMode(STATUS_LED, INPUT); 
+   psm_status=1;
+   errorstatus &= ~(1 << 4);
+   }
+   #endif
+   #ifdef RTTY
+   if(!lockvariables) {
+   
+   prepare_data();
+   if(alt>maxalt && sats >= 4)
+   {
+   maxalt=alt;
+   }
+   }
+   #endif
+   if((oldhour==hour&&oldminute==minute&&oldsecond==second)||sats<=4) {
+   tslf++;
+   }
+   else
+   {
+   tslf=0;
+   errorstatus &= ~(1 << 0);
+   errorstatus &= ~(1 << 1);
+   }
+   if((tslf>10 && ((errorstatus & (1 << 0))==0)&&((errorstatus & (1 << 1))==0))) {
+   setupGPS();
+   wait(125);
+   setGps_MaxPerformanceMode();
+   wait(125);
+   //    errorstatus=1;
+   errorstatus |=(1 << 0);
+   psm_status=0;
+   errorstatus |=(1 << 4); 
+   }
+   if(tslf>100 && ((errorstatus & (1 << 0))==1)&&((errorstatus & (1 << 1))==0)) {
+   errorstatus |=(1 << 0);
+   errorstatus |=(1 << 1);
+   Serial.flush();
+   resetGPS();
+   wait(125);
+   setupGPS();
+   }
+   
+   #ifdef DOMINOEX
+   if(_txstatus==0)
+   {
+   prepare_data();
+   snprintf(_txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,batteryadc_v,errorstatus);
+   snprintf(_txstring,80, "%s*%04X\n", _txstring, gps_CRC16_checksum(_txstring)); 
+   _txstatus==1;
+   }
+   #endif     
+   */
+}   
 
 void setupGPS() {
   //Turning off all GPS NMEA strings apart on the uBlox module
   // Taken from Project Swift (rather than the old way of sending ascii text)
+  int gps_set_sucess=0;
   uint8_t setNMEAoff[] = {
-    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                            };
+    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                                  };
   sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
+  while(!gps_set_sucess)
+  {
+    sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
+    gps_set_sucess=getUBX_ACK(setNMEAoff);
+    if(!gps_set_sucess)
+    {
+      blinkled(2);
+    }
+  }
   wait(500);
   setGPS_DynamicModel6();
   wait(500);
@@ -187,7 +220,7 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 uint8_t gps_check_nav(void)
 {
   uint8_t request[8] = {
-    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                               };
+    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                                         };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -249,7 +282,7 @@ uint8_t* ckb)
   }
 }
 boolean getUBX_ACK(uint8_t *MSG) {
-  uint8_t b;
+  uint8_t ubxb;
   uint8_t ackByteID = 0;
   uint8_t ackPacket[10];
   unsigned long startTime = millis();
@@ -287,10 +320,10 @@ boolean getUBX_ACK(uint8_t *MSG) {
 
     // Make sure data is available to read
     if (Serial.available()) {
-      b = Serial.read();
+      ubxb = Serial.read();
 
       // Check that bytes arrive in sequence as per expected ACK packet
-      if (b == ackPacket[ackByteID]) { 
+      if (ubxb == ackPacket[ackByteID]) { 
         ackByteID++;
       } 
       else {
@@ -307,7 +340,7 @@ void gps_check_lock()
   // Construct the request to the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x06, 0x00, 0x00,
-    0x07, 0x16                                                                                                                                      };
+    0x07, 0x16                                                                                                                                                };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -347,7 +380,7 @@ void setGPS_DynamicModel6()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                               };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                                         };
   while(!gps_set_sucess)
   {
     sendUBX(setdm6, sizeof(setdm6)/sizeof(uint8_t));
@@ -363,7 +396,7 @@ void setGPS_DynamicModel3()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                               };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                                         };
   while(!gps_set_sucess)
   {
     sendUBX(setdm3, sizeof(setdm3)/sizeof(uint8_t));
@@ -377,7 +410,7 @@ void gps_get_position()
   // Request a NAV-POSLLH message from the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x02, 0x00, 0x00, 0x03,
-    0x0A                                                                                                                                  };
+    0x0A                                                                                                                                            };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -424,7 +457,7 @@ void gps_get_time()
   // Send a NAV-TIMEUTC message to the receiver
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x21, 0x00, 0x00,
-    0x22, 0x67                                                                                                                                };
+    0x22, 0x67                                                                                                                                          };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -472,12 +505,12 @@ uint16_t gps_CRC16_checksum (char *string)
 #ifdef RTTY
 ISR(TIMER1_COMPA_vect)
 {
-  switch(txstatus) {
+  switch(_txstatus) {
   case 0: // This is the optional delay between transmissions.
     txj++;
     if(txj>(TXDELAY*RTTY_BAUD)) { 
       txj=0;
-      txstatus=1;
+      _txstatus=1;
     }
     break;
   case 1: // Initialise transmission
@@ -486,27 +519,27 @@ ISR(TIMER1_COMPA_vect)
       maxalt=alt;
     }
     lockvariables=1;
-    snprintf(txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,batteryadc_v,errorstatus);
-    snprintf(txstring,80, "%s*%04X\n", txstring, gps_CRC16_checksum(txstring));
+    snprintf(_txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,batteryadc_v,errorstatus);
+    snprintf(_txstring,80, "%s*%04X\n", _txstring, gps_CRC16_checksum(_txstring));
     maxalt=0;
     lockvariables=0;
-    txstringlength=strlen(txstring);
-    txstatus=2;
+    _txstringlength=strlen(_txstring);
+    _txstatus=2;
     txj=0;
     break;
 
   case 2: // Grab a char and lets go transmit it. 
-    if ( txj < txstringlength)
+    if ( txj < _txstringlength)
     {
-      txc = txstring[txj];
+      txc = _txstring[txj];
       txj++;
-      txstatus=3;
+      _txstatus=3;
       rtty_txbit (0); // Start Bit;
       txi=0;
     }
     else 
     {
-      txstatus=0; // Should be finished
+      _txstatus=0; // Should be finished
       txj=0;
       count++;
     }
@@ -523,7 +556,7 @@ ISR(TIMER1_COMPA_vect)
     else 
     {
       rtty_txbit (1); // Stop Bit
-      txstatus=4;
+      _txstatus=4;
       txi=0;
       break;
     } 
@@ -531,12 +564,12 @@ ISR(TIMER1_COMPA_vect)
     if(STOPBITS==2)
     {
       rtty_txbit (1); // Stop Bit
-      txstatus=2;
+      _txstatus=2;
       break;
     }
     else
     {
-      txstatus=2;
+      _txstatus=2;
       break;
     }
 
@@ -556,22 +589,74 @@ void rtty_txbit (int bit)
 }
 #endif
 
+#ifdef DOMINOEX
+ISR(TIMER1_COMPA_vect)
+{
+  static uint8_t sym = 0;  /* Currently transmitting symbol */
+  static uint8_t c = 0x00; /* Current character */
+  static uint8_t s = 0;    /* Current symbol index */
+  static char *p = 0;      /* Pointer to primary tx buffer */
+
+  uint8_t nsym;
+  //  uint8_t dacbuf[3];
+  //  uint16_t dacval;
+
+  /* Fetch the next symbol */
+  nsym = varicode[c][s++];
+
+  /* Update the transmitting symbol */
+  sym = (sym + 2 + nsym) % 18;
+  setChannel(sym);
+
+  /* Check if this character has less than 3 symbols */
+  if(s < 3 && !(varicode[c][s] & 0x08)) s = 3;
+
+  /* Still more symbols to send? Exit interrupt */
+  if(s != 3) return;
+
+  /* We're done with this character, fetch the next one */
+  s = 0;
+
+  switch(_txstatus)
+  {
+  case 0:
+    /* Nothing is ready for us, transmit a NUL */
+    c = 0x00;
+    break;
+
+  case 1:
+    /* 1 signals a new primary string is ready */
+    p = _txstring;
+    _txstatus++;
+    /* Fall through... */
+
+  case 2:
+    /* Read the next character from the primary buffer */
+    c = (uint8_t) *(p++);
+
+    /* Reached the end of the string? */
+    if(c == 0x00) _txstatus = 0;
+    break;
+  }
+}
+#endif
+
 void setGPS_PowerSaveMode() {
   // Power Save Mode 
   uint8_t setPSM[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                               }; // Setup for Power Save Mode (Default Cyclic 1s)
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                                         }; // Setup for Power Save Mode (Default Cyclic 1s)
   sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
 }
 
 void setGps_MaxPerformanceMode() {
   //Set GPS for Max Performance Mode
   uint8_t setMax[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                               }; // Setup for Max Power Mode
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                                         }; // Setup for Max Power Mode
   sendUBX(setMax, sizeof(setMax)/sizeof(uint8_t));
 }
 void resetGPS() {
   uint8_t set_reset[] = {
-    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                     };
+    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                               };
   sendUBX(set_reset, sizeof(set_reset)/sizeof(uint8_t));
 }
 
@@ -589,7 +674,12 @@ void initialise_interrupt()
   cli();          // disable global interrupts
   TCCR1A = 0;     // set entire TCCR1A register to 0
   TCCR1B = 0;     // same for TCCR1B
+#ifdef RTTY
   OCR1A = F_CPU / 1024 / RTTY_BAUD - 1;  // set compare match register to desired timer count:
+#endif
+#ifdef DOMINOEX
+  OCR1A = F_CPU/16000-1; // DOMINOEX16
+#endif
   TCCR1B |= (1 << WGM12);   // turn on CTC mode:
   // Set CS10 and CS12 bits for:
   TCCR1B |= (1 << CS10);
@@ -635,6 +725,11 @@ void checkDynamicModel() {
     }
   }
 }
+
+
+
+
+
 
 
 
