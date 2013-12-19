@@ -1,4 +1,5 @@
-PROGMEM unsigned char varicode[][3] = {
+#include <avr/pgmspace.h>
+PROGMEM prog_uchar varicode[][3] = {
 	/* Primary alphabet */
 	{ 1,15, 9}, { 1,15,10}, { 1,15,11}, { 1,15,12}, { 1,15,13}, { 1,15,14}, { 1,15,15}, { 2, 8, 8},
 	{ 2,12, 0}, { 2, 8, 9}, { 2, 8,10}, { 2, 8,11}, { 2, 8,12}, { 2,13, 0}, { 2, 8,13}, { 2, 8,14},

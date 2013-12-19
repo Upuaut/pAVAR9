@@ -11,7 +11,7 @@
 // RTTY CONFIG
 #define ASCII 7          // ASCII 7 or 8
 #define STOPBITS 2       // Either 1 or 2
-#define TXDELAY  0
+#define TXDELAY  300
 #define RTTY_BAUD 50     // Baud rate for RTTY 
 
 // POWER SAVING SETTING

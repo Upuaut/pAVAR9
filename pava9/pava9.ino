@@ -5,7 +5,7 @@
  By Anthony Stirk M0UPU 
  
  December 2013
- Subversion 1.05 (Initial Commit)
+ Subversion 1.06
  
  Thanks and credits :
  
@@ -103,16 +103,26 @@ void setup() {
 void loop()
 {
 
-  while(_txstatus);
+ /* while(_txstatus);
   {
     // prepare_data();
-    snprintf(_txstring, 80, "THIS IS JUST A TEST\n");
+    snprintf(_txstring, 80, "Daisy, Daisy give me your answer do.\n");
     //  snprintf(_txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,batteryadc_v,errorstatus);
     //   snprintf(_txstring,80, "%s*%04X\n", _txstring, gps_CRC16_checksum(_txstring)); 
     _txstatus = 1;
+  }*/
+  
+#ifdef DOMINOEX
+  if(_txstatus==0) 
+  {
+    prepare_data();
+   // snprintf(_txstring, 80, "THIS IS JUST A TEST\n");
+     snprintf(_txstring,80, "$$$$$PAVA-R9,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",count, hour, minute, second,lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",lon_int,lon_dec, maxalt,sats,batteryadc_v,errorstatus);
+     snprintf(_txstring,80, "%s*%04X\n", _txstring, gps_CRC16_checksum(_txstring)); 
+    _txstatus = 1;
   }
-
-  /*
+#endif
+  
   oldhour=hour;
    oldminute=minute;
    oldsecond=second;
@@ -177,7 +187,7 @@ void loop()
    wait(125);
    setupGPS();
    }
-   */
+   
 }   
 
 void setupGPS() {
@@ -185,7 +195,7 @@ void setupGPS() {
   // Taken from Project Swift (rather than the old way of sending ascii text)
   int gps_set_sucess=0;
   uint8_t setNMEAoff[] = {
-    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                                      };
+    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                                        };
   sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
   while(!gps_set_sucess)
   {
@@ -214,7 +224,7 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 uint8_t gps_check_nav(void)
 {
   uint8_t request[8] = {
-    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                                             };
+    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                                               };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -334,7 +344,7 @@ void gps_check_lock()
   // Construct the request to the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x06, 0x00, 0x00,
-    0x07, 0x16                                                                                                                                                    };
+    0x07, 0x16                                                                                                                                                      };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -374,7 +384,7 @@ void setGPS_DynamicModel6()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                                             };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                                               };
   while(!gps_set_sucess)
   {
     sendUBX(setdm6, sizeof(setdm6)/sizeof(uint8_t));
@@ -390,7 +400,7 @@ void setGPS_DynamicModel3()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                                             };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                                               };
   while(!gps_set_sucess)
   {
     sendUBX(setdm3, sizeof(setdm3)/sizeof(uint8_t));
@@ -404,7 +414,7 @@ void gps_get_position()
   // Request a NAV-POSLLH message from the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x02, 0x00, 0x00, 0x03,
-    0x0A                                                                                                                                                };
+    0x0A                                                                                                                                                  };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -451,7 +461,7 @@ void gps_get_time()
   // Send a NAV-TIMEUTC message to the receiver
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x21, 0x00, 0x00,
-    0x22, 0x67                                                                                                                                              };
+    0x22, 0x67                                                                                                                                                };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -596,14 +606,14 @@ ISR(TIMER1_COMPA_vect)
   //  uint16_t dacval;
 
   /* Fetch the next symbol */
-  nsym = varicode[c][s++];
+  nsym = pgm_read_word(&varicode[c][s++]);
 
   /* Update the transmitting symbol */
   sym = (sym + 2 + nsym) % 18;
   setChannel(sym);
-
+  
   /* Check if this character has less than 3 symbols */
-  if(s < 3 && !(varicode[c][s] & 0x08)) s = 3;
+  if(s < 3 && !(pgm_read_word(&varicode[c][s]) & 0x08)) s = 3;
 
   /* Still more symbols to send? Exit interrupt */
   if(s != 3) return;
@@ -629,7 +639,11 @@ ISR(TIMER1_COMPA_vect)
     c = (uint8_t) *(p++);
 
     /* Reached the end of the string? */
-    if(c == 0x00) _txstatus = 0;
+    if(c == 0x00) 
+      {
+        _txstatus = 0;
+        count++;
+      }
     break;
   }
 }
@@ -638,19 +652,19 @@ ISR(TIMER1_COMPA_vect)
 void setGPS_PowerSaveMode() {
   // Power Save Mode 
   uint8_t setPSM[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                                             }; // Setup for Power Save Mode (Default Cyclic 1s)
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                                               }; // Setup for Power Save Mode (Default Cyclic 1s)
   sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
 }
 
 void setGps_MaxPerformanceMode() {
   //Set GPS for Max Performance Mode
   uint8_t setMax[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                                             }; // Setup for Max Power Mode
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                                               }; // Setup for Max Power Mode
   sendUBX(setMax, sizeof(setMax)/sizeof(uint8_t));
 }
 void resetGPS() {
   uint8_t set_reset[] = {
-    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                                   };
+    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                                     };
   sendUBX(set_reset, sizeof(set_reset)/sizeof(uint8_t));
 }
 
@@ -719,6 +733,7 @@ void checkDynamicModel() {
     }
   }
 }
+
 
 
 
