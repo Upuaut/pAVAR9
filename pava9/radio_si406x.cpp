@@ -95,7 +95,7 @@ void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pDat
     
     digitalWrite(SSpin,HIGH);
 
-    _delay_us(20);
+  //  _delay_us(20);
 
     digitalWrite(SSpin,LOW);   
     
@@ -106,7 +106,7 @@ void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pDat
        if (reply != 0xFF)
        {
          digitalWrite(SSpin,HIGH);
-         _delay_us(20);
+  //       _delay_us(20);
          digitalWrite(SSpin,LOW);   
        }
     }
@@ -117,7 +117,7 @@ void SendCmdReceiveAnswerFast(int byteCountTx, int byteCountRx, const char* pDat
     }
        
     digitalWrite(SSpin,HIGH);
-    _delay_ms(1); // Don't wait too long now...
+  //  _delay_ms(1); // Don't wait too long now...
 }
 
 
