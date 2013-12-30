@@ -4,7 +4,7 @@
 #define __CONFIG_H__
 
 // RADIO CONFIG
-#define RADIO_FREQUENCY   434501780UL
+#define RADIO_FREQUENCY   434503000UL
 //#define RTTY
 #define DOMINOEX
 

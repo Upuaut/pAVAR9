@@ -56,10 +56,11 @@ volatile int count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
-int navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
+int battv=0, navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
-int psm_status = 0, batteryadc_v=0;
+int psm_status = 0, batteryadc_v=0, battvaverage=0;
 int32_t tslf=0;
+int32_t battvsmooth[5] ;
 int errorstatus=0; 
 /* Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
  Bit 1 = GPS Error Condition Noted Cold Boot GPS
@@ -210,7 +211,7 @@ void buildstring()
   hour, minute, second,
   lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
   lon_int,lon_dec,
-  maxalt,sats,batteryadc_v,
+  maxalt,sats,battvaverage,
   errorstatus);
   crccat(_txstring);
   maxalt=0;
@@ -667,6 +668,15 @@ void prepare_data() {
   gps_get_position();
   gps_get_time();
   batteryadc_v=analogRead(BATTERY_ADC);
+  battv = batteryadc_v*1.85;
+
+  battvsmooth[4] = battvsmooth[3];
+  battvsmooth[3] = battvsmooth[2];
+  battvsmooth[2] = battvsmooth[1];
+  battvsmooth[1] = battvsmooth[0];
+  battvsmooth[0] = battv;
+  battvaverage = (battvsmooth[0]+battvsmooth[1]+ battvsmooth[2]+battvsmooth[3]+battvsmooth[4])/5;
+
 }
 
 void initialise_interrupt() 
