@@ -267,10 +267,9 @@ static uint16_t si_get_temp()
     SS(0);
     _spi_transfer(0x44);
     r = _spi_transfer(0x00);
-    SS(1);
+    if(r != 0xFF) SS(1);
   }
   while(r != 0xFF);
-  SS(0);
   r = _spi_transfer(0x00); // GPIO ADC
   r = _spi_transfer(0x00); // BATT ADC
   r= _spi_transfer(0x00); // Temp ADC
