@@ -261,16 +261,16 @@ static uint16_t si_get_temp()
   uint8_t data[] = { 
     0x10, 0x04   };
   _send_command(CMD_GET_ADC_READING, data, sizeof(data));
-  _wait_for_cts();
   //do the next bit three times the last one is the temp
    do
   {
     SS(0);
-
     _spi_transfer(0x44);
     r = _spi_transfer(0x00);
+    SS(1);
   }
   while(r != 0xFF);
+  SS(0);
   r = _spi_transfer(0x00); // GPIO ADC
   r = _spi_transfer(0x00); // BATT ADC
   r= _spi_transfer(0x00); // Temp ADC
@@ -279,5 +279,6 @@ static uint16_t si_get_temp()
   outputtemp= _spi_transfer(0x00); // Temp ADC
   SS(1);
   return outputtemp+=sitemp1 <<8;
+//  return outputtemp;
 }
 

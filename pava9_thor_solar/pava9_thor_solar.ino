@@ -207,12 +207,12 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 }
 void buildstring()
 {
-  temp=float(899/4096)*(si_get_temp()-293);
+  temp=si_get_temp();
   if(alt>maxalt && sats >= 4)
   {
     maxalt=alt;
   }
-snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%i"),temp);
+snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%u"),temp);
 /*snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i,%i,%i"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
   lon_int,lon_dec,  maxalt,sats,battvaverage,solarvaverage,errorstatus,temp);
 /*  snprintf(_txstring,80, "$$$$$%s,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",
