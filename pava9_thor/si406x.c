@@ -149,7 +149,8 @@ void si_init(void)
 	_power_up();
 	
 	/* Set the initial frequency */
-	si_set_frequency(434501000UL);
+//	si_set_frequency(434501000UL);
+	si_set_frequency(RADIO_FREQUENCY);
 	
 	/* Set to CW mode */
 	_set_modem();

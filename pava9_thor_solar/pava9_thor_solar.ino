@@ -54,12 +54,14 @@ volatile int txj;
 uint32_t count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
+uint16_t temp;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
 int battv=0, navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
-int psm_status = 0, batteryadc_v=0, battvaverage=0;
+int psm_status = 0, batteryadc_v=0, battvaverage=0,solaradc_v=0, solarv=0, solarvaverage=0;
 int32_t tslf=0;
 int32_t battvsmooth[5] ;
+int32_t solarvsmooth[5] ;
 int errorstatus=0; 
 /* Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
  Bit 1 = GPS Error Condition Noted Cold Boot GPS
@@ -71,9 +73,11 @@ int errorstatus=0;
 
 
 void setup() {
+  analogReference(DEFAULT);
   pinMode(STATUS_LED, OUTPUT); 
   pinMode(GPS_ENABLE,OUTPUT);
   pinMode(BATTERY_ADC, INPUT);
+  pinMode(SOLARPANEL_ADC, INPUT);
   digitalWrite(GPS_ENABLE,LOW);
   blinkled(6);
   Serial.begin(9600);
@@ -203,12 +207,14 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 }
 void buildstring()
 {
+  temp=float(899/4096)*(si_get_temp()-293);
   if(alt>maxalt && sats >= 4)
   {
     maxalt=alt;
   }
-snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
-  lon_int,lon_dec,  maxalt,sats,battvaverage,errorstatus);
+snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%i"),temp);
+/*snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i,%i,%i"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
+  lon_int,lon_dec,  maxalt,sats,battvaverage,solarvaverage,errorstatus,temp);
 /*  snprintf(_txstring,80, "$$$$$%s,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",
   CALLSIGN,count,
   hour, minute, second,
@@ -531,15 +537,25 @@ void prepare_data() {
   gps_check_lock();
   gps_get_position();
   gps_get_time();
+  
   batteryadc_v=analogRead(BATTERY_ADC);
-  battv = batteryadc_v;
-
+  battv = batteryadc_v*5.75;
+  solaradc_v=analogRead(SOLARPANEL_ADC);
+  solarv = solaradc_v*3.9;
   battvsmooth[4] = battvsmooth[3];
   battvsmooth[3] = battvsmooth[2];
   battvsmooth[2] = battvsmooth[1];
   battvsmooth[1] = battvsmooth[0];
   battvsmooth[0] = battv;
   battvaverage = (battvsmooth[0]+battvsmooth[1]+ battvsmooth[2]+battvsmooth[3]+battvsmooth[4])/5;
+
+  solarvsmooth[4] = solarvsmooth[3];
+  solarvsmooth[3] = solarvsmooth[2];
+  solarvsmooth[2] = solarvsmooth[1];
+  solarvsmooth[1] = solarvsmooth[0];
+  solarvsmooth[0] = solarv;
+  solarvaverage = (solarvsmooth[0]+solarvsmooth[1]+ solarvsmooth[2]+solarvsmooth[3]+solarvsmooth[4])/5;
+
 
 }
 
