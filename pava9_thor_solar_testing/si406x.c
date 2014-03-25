@@ -277,7 +277,8 @@ static uint16_t si_get_temp()
     r = _spi_transfer(0x00);
     if(r != 0xFF) SS(1);
   }
-  while(r != 0xFF);
+  _wait_for_response(adcresponse,8)
+ /* while(r != 0xFF);
   GPIO_ADC_MSB = _spi_transfer(0x00); // GPIO ADC
   GPIO_ADC_LSB = _spi_transfer(0x00); // BATT ADC
   BATTERY_ADC_MSB= _spi_transfer(0x00); // Temp ADC
@@ -287,10 +288,34 @@ static uint16_t si_get_temp()
   TEMP_SLOPE= _spi_transfer(0x00); // Temp ADC
   TEMP_INTERCEPT= _spi_transfer(0x00); // Temp ADC
   SS(1);
-  TEMPADC=BATTERY_ADC_MSB;
-  TEMPADC+=BATTERY_ADC_LSB <<8;
-  TEMPINC=((800+TEMP_SLOPE)/4096)*(TEMPADC-(TEMP_INTERCEPT/2+256));
-  return TEMPINC;
+  TEMPADC=TEMP_ADC_LSB;
+  TEMPADC+=TEMP_ADC_MSB <<8;
+  TEMPINC=TEMPADC-293;
+  return TEMPADC; */
 }
 
-
+static void _wait_for_response(uint8_t *buf, uint8_t len)
+{
+        uint8_t r;
+       
+        /* GPIO1 pin method */
+        /* TODO: Add a timeout here */
+        /*while(PIND & _BV(6));*/
+       
+        /* Poll CTS over SPI method */
+        do
+        {
+                SS(0);
+               
+                _spi_transfer(0x44);
+                r = _spi_transfer(0x00);
+               
+                if(r != 0xFF) SS(1);
+        }
+        while(r != 0xFF);
+       
+        /* Read the response */
+        while(len--) *(buf++) = _spi_transfer(0x00);
+       
+        SS(1);
+}

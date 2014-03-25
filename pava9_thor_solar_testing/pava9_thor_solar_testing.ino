@@ -216,8 +216,7 @@ void buildstring()
 /*  snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i,%02x"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
   lon_int,lon_dec,  maxalt,sats,battvaverage,solarvaverage,errorstatus); */
 
-snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i,%i,%02x"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
-  lon_int,lon_dec,  maxalt,sats,battvaverage,solarvaverage,temp,errorstatus);
+snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%i"),temp);
   
   crccat(_txstring);
   maxalt=0;
