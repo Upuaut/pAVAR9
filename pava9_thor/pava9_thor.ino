@@ -16,7 +16,6 @@
  KT5TK's Si446x code. 
  
  Code snippets from Project Swift Nigel Smart / Philip Heron
- isnt' 
  Big thanks to Dave Akerman, Phil Heron, Mark Jessop, Leo Bodnar for suggestions
  ideas and assistance. 
  
@@ -54,16 +53,19 @@ volatile int txj;
 uint32_t count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
+uint16_t temp;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
 int battv=0, navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
-int psm_status = 0, batteryadc_v=0, battvaverage=0;
+int psm_status = 0, batteryadc_v=0, battvaverage=0,solaradc_v=0, solarv=0, solarvaverage=0;
 int32_t tslf=0;
 int32_t battvsmooth[5] ;
-int errorstatus=0; 
-/* Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
+int32_t solarvsmooth[5] ;
+int errorstatus=8; 
+/* 
+ Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
  Bit 1 = GPS Error Condition Noted Cold Boot GPS
- Bit 2 = Reserved
+ Bit 2 = No used on pAVA
  Bit 3 = Current Dynamic Model 0 = Flight 1 = Pedestrian
  Bit 4 = PSM Status 0 = PSM On 1 = PSM Off                   
  Bit 5 = Lock 0 = GPS Locked 1= Not Locked
@@ -71,9 +73,11 @@ int errorstatus=0;
 
 
 void setup() {
+  analogReference(DEFAULT);
   pinMode(STATUS_LED, OUTPUT); 
   pinMode(GPS_ENABLE,OUTPUT);
   pinMode(BATTERY_ADC, INPUT);
+  pinMode(SOLARPANEL_ADC, INPUT);
   digitalWrite(GPS_ENABLE,LOW);
   blinkled(6);
   Serial.begin(9600);
@@ -164,10 +168,10 @@ void loop()
     wait(125);
     setupGPS();
   }
-thor_wait();  
-prepare_data();
-buildstring();
-thor_string(_txstring);
+  thor_wait();  
+  prepare_data();
+  buildstring();
+  thor_string(_txstring);
 
 }   
 
@@ -176,7 +180,7 @@ void setupGPS() {
   // Taken from Project Swift (rather than the old way of sending ascii text)
   int gps_set_sucess=0;
   uint8_t setNMEAoff[] = {
-    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                                                };
+    0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xA9                                                  };
   sendUBX(setNMEAoff, sizeof(setNMEAoff)/sizeof(uint8_t));
   while(!gps_set_sucess)
   {
@@ -203,28 +207,24 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 }
 void buildstring()
 {
+  //temp=si_get_temp();
   if(alt>maxalt && sats >= 4)
   {
     maxalt=alt;
   }
-snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
+
+  snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%02x"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
   lon_int,lon_dec,  maxalt,sats,battvaverage,errorstatus);
-/*  snprintf(_txstring,80, "$$$$$%s,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",
-  CALLSIGN,count,
-  hour, minute, second,
-  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
-  lon_int,lon_dec,
-  maxalt,sats,battvaverage,
-  errorstatus);*/
+
+
   crccat(_txstring);
   maxalt=0;
-//  count++;
 }
 
 uint8_t gps_check_nav(void)
 {
   uint8_t request[8] = {
-    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                                                       };
+    0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84                                                                                                         };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -241,8 +241,6 @@ uint8_t gps_check_nav(void)
   if( !_gps_verify_checksum(&buf[2], 40) ) {
     GPSerror = 43;
   }
-
-
   // Return the navigation mode and let the caller analyse it
   navmode = buf[8];
 }
@@ -344,7 +342,7 @@ void gps_check_lock()
   // Construct the request to the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x06, 0x00, 0x00,
-    0x07, 0x16                                                                                                                                                              };
+    0x07, 0x16                                                                                                                                                                };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -384,7 +382,7 @@ void setGPS_DynamicModel6()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                                                       };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC                                                                                                         };
   while(!gps_set_sucess)
   {
     sendUBX(setdm6, sizeof(setdm6)/sizeof(uint8_t));
@@ -400,7 +398,7 @@ void setGPS_DynamicModel3()
     0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
     0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                                                       };
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x76                                                                                                         };
   while(!gps_set_sucess)
   {
     sendUBX(setdm3, sizeof(setdm3)/sizeof(uint8_t));
@@ -414,7 +412,7 @@ void gps_get_position()
   // Request a NAV-POSLLH message from the GPS
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x02, 0x00, 0x00, 0x03,
-    0x0A                                                                                                                                                          };
+    0x0A                                                                                                                                                            };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -461,7 +459,7 @@ void gps_get_time()
   // Send a NAV-TIMEUTC message to the receiver
   uint8_t request[8] = {
     0xB5, 0x62, 0x01, 0x21, 0x00, 0x00,
-    0x22, 0x67                                                                                                                                                        };
+    0x22, 0x67                                                                                                                                                          };
   sendUBX(request, 8);
 
   // Get the message back from the GPS
@@ -510,19 +508,19 @@ uint16_t gps_CRC16_checksum (char *string)
 void setGPS_PowerSaveMode() {
   // Power Save Mode 
   uint8_t setPSM[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                                                       }; // Setup for Power Save Mode (Default Cyclic 1s)
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x01, 0x22, 0x92                                                                                                                         }; // Setup for Power Save Mode (Default Cyclic 1s)
   sendUBX(setPSM, sizeof(setPSM)/sizeof(uint8_t));
 }
 
 void setGps_MaxPerformanceMode() {
   //Set GPS for Max Performance Mode
   uint8_t setMax[] = { 
-    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                                                       }; // Setup for Max Power Mode
+    0xB5, 0x62, 0x06, 0x11, 0x02, 0x00, 0x08, 0x00, 0x21, 0x91                                                                                                                         }; // Setup for Max Power Mode
   sendUBX(setMax, sizeof(setMax)/sizeof(uint8_t));
 }
 void resetGPS() {
   uint8_t set_reset[] = {
-    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                                             };
+    0xB5, 0x62, 0x06, 0x04, 0x04, 0x00, 0xFF, 0x87, 0x00, 0x00, 0x94, 0xF5                                                                                               };
   sendUBX(set_reset, sizeof(set_reset)/sizeof(uint8_t));
 }
 
@@ -531,15 +529,25 @@ void prepare_data() {
   gps_check_lock();
   gps_get_position();
   gps_get_time();
-  batteryadc_v=analogRead(BATTERY_ADC);
-  battv = batteryadc_v;
 
+  batteryadc_v=analogRead(BATTERY_ADC);
+  battv = batteryadc_v*2;
+//  solaradc_v=analogRead(SOLARPANEL_ADC);
+//  solarv = solaradc_v*5.6;
   battvsmooth[4] = battvsmooth[3];
   battvsmooth[3] = battvsmooth[2];
   battvsmooth[2] = battvsmooth[1];
   battvsmooth[1] = battvsmooth[0];
   battvsmooth[0] = battv;
   battvaverage = (battvsmooth[0]+battvsmooth[1]+ battvsmooth[2]+battvsmooth[3]+battvsmooth[4])/5;
+/*
+  solarvsmooth[4] = solarvsmooth[3];
+  solarvsmooth[3] = solarvsmooth[2];
+  solarvsmooth[2] = solarvsmooth[1];
+  solarvsmooth[1] = solarvsmooth[0];
+  solarvsmooth[0] = solarv;
+  solarvaverage = (solarvsmooth[0]+solarvsmooth[1]+ solarvsmooth[2]+solarvsmooth[3]+solarvsmooth[4])/5;
+*/
 
 }
 
@@ -665,6 +673,7 @@ ISR(TIMER1_COMPA_vect)
   tone = (tone + 2 + bit_sh);
   if(tone >= TONES) tone -= TONES;
 }
+
 
 
 

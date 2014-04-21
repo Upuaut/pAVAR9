@@ -4,23 +4,17 @@
 #define __CONFIG_H__
 
 // RADIO CONFIG
-#define RADIO_FREQUENCY   434499250UL
-//#define RTTY
+#define RADIO_FREQUENCY   434503000UL
+#define RTTY
 //#define DOMINOEX
 
-#define CALLSIGN "A"
+#define CALLSIGN "PAVA"
 
 // RTTY CONFIG
 #define ASCII 7          // ASCII 7 or 8
 #define STOPBITS 2       // Either 1 or 2
 #define TXDELAY  0
-#define RTTY_BAUD 50     // Baud rate for RTTY 
-
-/* THOR settings (slow, not as slow and non-standard) */
-//#define THOR8
-#define THOR16
-//#define THOR32
-
+#define RTTY_BAUD 100     // Baud rate for RTTY 
 
 // POWER SAVING SETTING
 #define POWERSAVING      // Comment out to turn power saving off

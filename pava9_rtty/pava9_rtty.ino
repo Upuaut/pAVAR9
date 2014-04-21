@@ -206,7 +206,7 @@ void buildstring()
   {
     maxalt=alt;
   }
-  snprintf(_txstring,80, "$$$$$%s,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i",
+  snprintf(_txstring,80, "$$$$$%s,%i,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%x",
   CALLSIGN,count,
   hour, minute, second,
   lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
