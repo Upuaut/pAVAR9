@@ -4,7 +4,7 @@
 #define __CONFIG_H__
 
 // RADIO CONFIG
-#define RADIO_FREQUENCY   434451350UL // Generally desired + 1350
+#define RADIO_FREQUENCY   434447350UL // Generally desired + 1350
 //#define RTTY
 //#define DOMINOEX
 
@@ -26,7 +26,7 @@
 #define POWERSAVING      // Comment out to turn power saving off
 
 // BOARD SETTINGS
-#define STATUS_LED 7     // PAVA R9 Boards have an LED on PIN4
+#define STATUS_LED 4     // PAVA R9 Boards have an LED on PIN4
 #define GPS_ENABLE 3
 #define SHUTDOWN_SI406x_PIN   5
 #define AUDIO_PIN             6
