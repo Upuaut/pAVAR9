@@ -51,7 +51,7 @@ volatile int txj;
 uint32_t count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
-int16_t sitemp;
+int16_t sitemp,sitempreading;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
 int battv=0, navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
@@ -63,7 +63,7 @@ int errorstatus=8;
 /* 
  Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
  Bit 1 = GPS Error Condition Noted Cold Boot GPS
- Bit 2 = No used on pAVA
+ Bit 2 = Timeout Error when reading temp sensor.
  Bit 3 = Current Dynamic Model 0 = Flight 1 = Pedestrian
  Bit 4 = PSM Status 0 = PSM On 1 = PSM Off                   
  Bit 5 = Lock 0 = GPS Locked 1= Not Locked
@@ -523,7 +523,16 @@ void prepare_data() {
   gps_check_lock();
   gps_get_position();
   gps_get_time();
-  sitemp=si_get_temperature(); 
+  sitempreading=si_get_temperature(); 
+   if(sitempreading<-290)
+    {
+     errorstatus |=(1 << 2);     
+    }
+    else
+    {
+      errorstatus &= ~(1 << 2);
+      sitemp=sitempreading;
+    }
   batteryadc_v=analogRead(BATTERY_ADC);
   battv = float(batteryadc_v*5.7);
   solaradc_v=analogRead(SOLARPANEL_ADC);
