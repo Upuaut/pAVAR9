@@ -53,7 +53,7 @@ volatile int txj;
 uint32_t count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
-uint16_t temp;
+int16_t sitemp;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
 int battv=0, navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
@@ -168,7 +168,7 @@ void loop()
     wait(125);
     setupGPS();
   }
-  thor_wait();  
+  thor_wait(); 
   prepare_data();
   buildstring();
   thor_string(_txstring);
@@ -207,16 +207,12 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 }
 void buildstring()
 {
-  //temp=si_get_temp();
   if(alt>maxalt && sats >= 4)
   {
     maxalt=alt;
   }
-
-  snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%02x"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
-  lon_int,lon_dec,  maxalt,sats,battvaverage,errorstatus);
-
-
+  snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i,%i,%02x"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
+  lon_int,lon_dec,  maxalt,sats,battvaverage,solarvaverage,sitemp/10,errorstatus);
   crccat(_txstring);
   maxalt=0;
 }
@@ -529,25 +525,23 @@ void prepare_data() {
   gps_check_lock();
   gps_get_position();
   gps_get_time();
-
+  sitemp=si_get_temperature(); 
   batteryadc_v=analogRead(BATTERY_ADC);
-  battv = batteryadc_v*2;
-//  solaradc_v=analogRead(SOLARPANEL_ADC);
-//  solarv = solaradc_v*5.6;
+  battv = float(batteryadc_v*5.7);
+  solaradc_v=analogRead(SOLARPANEL_ADC);
+  solarv = float(solaradc_v*1.92);
   battvsmooth[4] = battvsmooth[3];
   battvsmooth[3] = battvsmooth[2];
   battvsmooth[2] = battvsmooth[1];
   battvsmooth[1] = battvsmooth[0];
   battvsmooth[0] = battv;
   battvaverage = (battvsmooth[0]+battvsmooth[1]+ battvsmooth[2]+battvsmooth[3]+battvsmooth[4])/5;
-/*
   solarvsmooth[4] = solarvsmooth[3];
   solarvsmooth[3] = solarvsmooth[2];
   solarvsmooth[2] = solarvsmooth[1];
   solarvsmooth[1] = solarvsmooth[0];
   solarvsmooth[0] = solarv;
   solarvaverage = (solarvsmooth[0]+solarvsmooth[1]+ solarvsmooth[2]+solarvsmooth[3]+solarvsmooth[4])/5;
-*/
 
 }
 
@@ -614,8 +608,8 @@ ISR(TIMER1_COMPA_vect)
   uint8_t i, bit_sh;
 
   /* Transmit the tone */
-  si_set_channel(tone * THOR_DS);
-
+//  si_set_channel(tone * THOR_DS);
+     si_set_offset(tone * THOR_DS *2);
   if(_preamble)
   {
     tone = (tone + 2);
