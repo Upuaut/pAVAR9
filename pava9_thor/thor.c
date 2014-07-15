@@ -22,6 +22,7 @@
 #define INTER_BYTES (INTER_LEN / 8)
 
 /* THOR state */
+static uint8_t _tone;
 static uint16_t _conv_sh;
 static uint8_t _preamble;
 static uint8_t _inter_table[INTER_BYTES];
@@ -61,11 +62,78 @@ static inline uint16_t _thor_lookup_code(uint8_t c, uint8_t sec)
 	return(pgm_read_word(&_varicode[0]));
 }
 
-
+ISR(TIMER1_COMPA_vect)
+{
+	static uint16_t code;
+	static uint8_t len = 0;
+	uint8_t i, bit_sh;
+	
+	/* Transmit the tone */
+	//si_set_channel(_tone);
+	si_set_offset(_tone * 2);
+	
+	if(_preamble)
+	{
+		_tone = (_tone + 2);
+		if(_tone >= TONES) _tone -= TONES;
+		_preamble--;
+		return;
+	}
+	
+	/* Calculate the next tone */
+	bit_sh = 0;
+	for(i = 0; i < 2; i++)
+	{
+		uint8_t data;
+		
+		/* Done sending the current varicode? */
+		if(!len)
+		{
+			if(_txlen)
+			{
+				/* Read the next character */
+				if(_txpgm == 0) data = *(_txbuf++);
+				else data = pgm_read_byte(_txbuf++);
+				_txlen--;
+			}
+			else data = 0;
+			
+			/* Get the varicode for this character */
+			code = _thor_lookup_code(data, 0);
+			len  = code >> 12;
+		}
+		
+		/* Feed the next bit into the convolutional encoder */
+		_conv_sh = (_conv_sh << 1) | ((code >> --len) & 1);
+		bit_sh = (bit_sh << 2)
+		       | (_parity(_conv_sh & THOR_POLYA) << 1)
+		       | _parity(_conv_sh & THOR_POLYB);
+	}
+	
+	/* Add the new data to the interleaver */
+	_wtab(_inter_offset +   0, bit_sh & 0x08);
+	_wtab(_inter_offset +  41, bit_sh & 0x04);
+	_wtab(_inter_offset +  82, bit_sh & 0x02);
+	_wtab(_inter_offset + 123, bit_sh & 0x01);
+	
+	/* Read next symbol to transmit from the interleaver */
+	bit_sh = _inter_table[_inter_offset >> 3];
+	if(_inter_offset & 7) bit_sh &= 0x0F;
+	else bit_sh >>= 4;
+	
+	/* Shift the interleaver table offset forward */
+	_inter_offset = (_inter_offset + INTER_SIZE);
+	if(_inter_offset >= INTER_LEN) _inter_offset -= INTER_LEN;
+	
+	/* Calculate the next tone */
+	_tone = (_tone + 2 + bit_sh);
+	if(_tone >= TONES) _tone -= TONES;
+}
 
 void thor_init(void)
 {
 	/* Clear the THOR state */
+	_tone = 0;
 	_conv_sh = 0;
 	_txpgm = 0;
 	_txbuf = NULL;
@@ -80,6 +148,16 @@ void thor_init(void)
 	TCCR1B = _BV(WGM12) | _BV(CS12) | _BV(CS10); /* prescaler /1024 */
 	OCR1A = F_CPU / 1024 / THOR_BAUDRATE - 1;
 	TIMSK1 = _BV(OCIE1A); /* Enable interrupt */
+}
+
+void thor_stop(void)
+{
+	/* Flush the buffer */
+	thor_data_P(PSTR("\0\0\0\0\0\0\0\0"), 8);
+	thor_wait();
+	
+	/* Disable the interrupt */
+	TIMSK1 = 0;
 }
 
 void inline thor_wait(void)
