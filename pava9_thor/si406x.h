@@ -17,6 +17,10 @@
 #ifndef _SI406X_H
 #define _SI406X_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void si_init(void);
 extern void si_radio_on(void);
 extern void si_radio_off(void);
@@ -24,5 +28,10 @@ extern void si_set_frequency(uint32_t freq);
 extern void si_set_channel(uint8_t channel);
 extern void si_set_offset(int16_t offset);
 extern int16_t si_get_temperature();
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 

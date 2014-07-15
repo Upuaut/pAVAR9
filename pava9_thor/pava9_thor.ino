@@ -38,9 +38,7 @@
 
 #include "config.h"
 #include "si406x.h"
-#include "si406x.c"
 #include "thor.h"
-#include "thor.c"
 
 
 uint8_t buf[60]; 
@@ -599,114 +597,4 @@ uint16_t crccat(char *msg)
 
   return(x);
 }
-
-ISR(TIMER1_COMPA_vect)
-{
-  static uint16_t code;
-  static uint8_t tone = 0;
-  static uint8_t len = 0;
-  uint8_t i, bit_sh;
-
-  /* Transmit the tone */
-//  si_set_channel(tone * THOR_DS);
-     si_set_offset(tone * THOR_DS *2);
-  if(_preamble)
-  {
-    tone = (tone + 2);
-    if(tone >= TONES) tone -= TONES;
-    _preamble--;
-    return;
-  }
-
-  /* Calculate the next tone */
-  bit_sh = 0;
-  for(i = 0; i < 2; i++)
-  {
-    uint8_t data;
-
-    /* Done sending the current varicode? */
-    if(!len)
-    {
-      if(_txlen)
-      {
-        /* Read the next character */
-        if(_txpgm == 0) data = *(_txbuf++);
-        else data = pgm_read_byte(_txbuf++);
-        _txlen--;
-      }
-      else data = 0;
-
-      /* Get the varicode for this character */
-      code = _thor_lookup_code(data, 0);
-      len  = code >> 12;
-    }
-
-    /* Feed the next bit into the convolutional encoder */
-    _conv_sh = (_conv_sh << 1) | ((code >> --len) & 1);
-    bit_sh = (bit_sh << 2)
-      | (_parity(_conv_sh & THOR_POLYA) << 1)
-        | _parity(_conv_sh & THOR_POLYB);
-  }
-
-  /* Add the new data to the interleaver */
-  _wtab(_inter_offset +   0, bit_sh & 0x08);
-  _wtab(_inter_offset +  41, bit_sh & 0x04);
-  _wtab(_inter_offset +  82, bit_sh & 0x02);
-  _wtab(_inter_offset + 123, bit_sh & 0x01);
-
-  /* Read next symbol to transmit from the interleaver */
-  bit_sh = _inter_table[_inter_offset >> 3];
-  if(_inter_offset & 7) bit_sh &= 0x0F;
-  else bit_sh >>= 4;
-
-  /* Shift the interleaver table offset forward */
-  _inter_offset = (_inter_offset + INTER_SIZE);
-  if(_inter_offset >= INTER_LEN) _inter_offset -= INTER_LEN;
-
-  /* Calculate the next tone */
-  tone = (tone + 2 + bit_sh);
-  if(tone >= TONES) tone -= TONES;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
