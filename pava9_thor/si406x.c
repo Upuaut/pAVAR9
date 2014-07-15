@@ -41,15 +41,11 @@
 #define STATE_TX_TUNE 0x05
 #define STATE_TX      0x07
 
-/* Receive buffer */
-static uint8_t _rxbuf[8];
-
 static inline uint8_t _spi_transfer(uint8_t v)
 {
-  uint16_t timeout = 0xFFFF;
   /* TODO: There needs to be a timeout here */
   SPDR = v;
-  while(!(SPSR & _BV(SPIF))&& timeout--);
+  while(!(SPSR & _BV(SPIF)));
   return(SPDR);
 }
 
@@ -58,38 +54,24 @@ static inline uint8_t _spi_transfer(uint8_t v)
 static void _wait_for_cts()
 {
   uint8_t r;
-  uint16_t timeout=0xFFFF;
+
   /* GPIO1 pin method */
   /* TODO: Add a timeout here */
   /*while(PIND & _BV(6));*/
-    /* Poll CTS over SPI method */
-    do
-    {
-      SS(0);
-      _spi_transfer(0x44);
-      r = _spi_transfer(0x00);
-      SS(1);
-    }
-    while(r != 0xFF && timeout--);
-}
-static void _wait_for_response(uint8_t *buf, uint8_t len)
-{
-  uint8_t r;
-  /* Poll CTS over SPI ABCD */
-  while(1)
+
+  /* Poll CTS over SPI method */
+  do
   {
     SS(0);
-    _spi_transfer(0x44);
-    r = _spi_transfer(0xFF);
-    if(r == 0xFF) break;
-    SS(1);
-    _delay_us(10);
-  }
-  /* Read the requested data */
-  while(len--) *(buf++) = _spi_transfer(0xFF);
 
-  SS(1);
+    _spi_transfer(0x44);
+    r = _spi_transfer(0x00);
+
+    SS(1);
+  }
+  while(r != 0xFF);
 }
+
 static void _send_command(uint8_t cmd, uint8_t *data, uint8_t length)
 {
   _wait_for_cts();
@@ -124,7 +106,7 @@ static void _set_modem()
 {
   /* Set to 2FSK mode, driven from GPIO1 pin */
   uint8_t data[] = { 
-    0x20, 0x01, 0x00, 0xAA       };
+    0x20, 0x01, 0x00, 0xAA     };
   _send_command(CMD_SET_PROPERTY, data, sizeof(data));
 }
 
@@ -235,7 +217,7 @@ void si_set_frequency(uint32_t freq)
   /* set the band parameter */
   {
     uint8_t data[] = { 
-      0x20, 0x01, 0x51, 8 + band             };
+      0x20, 0x01, 0x51, 8 + band         };
     _send_command(CMD_SET_PROPERTY, data, sizeof(data));
   }
 
@@ -263,7 +245,7 @@ void si_set_frequency(uint32_t freq)
 void si_set_channel(uint8_t channel)
 {
   uint8_t data[] = { 
-    channel, 0x23, 0x00, 0x00       };
+    channel, 0x23, 0x00, 0x00     };
 
   /* Change to ready state */
   _set_state(STATE_READY);
@@ -272,28 +254,4 @@ void si_set_channel(uint8_t channel)
   _send_command(CMD_START_TX, data, sizeof(data));
 }
 
-int16_t si_get_temperature()
-{
-  uint8_t data[] = { 
-    0x10, 0x00   };
-  int32_t temp;
-
-  _send_command(CMD_GET_ADC_READING, data, sizeof(data));
-
-  _wait_for_response(_rxbuf, 8);
-
-  /* Calculate the temperature in C * 10 */
-  temp  = (_rxbuf[4] << 8) | _rxbuf[5];
-  temp *= 568;
-  temp /= 256;
-  temp -= 2970;
-
-  return(temp);
-}
-void si_set_offset(int16_t offset)
-{
-  uint8_t data[] = { 
-    0x20, 0x02, 0x0D, offset >> 8, offset & 0xFF   };
-  _send_command(CMD_SET_PROPERTY, data, sizeof(data));
-}
 
