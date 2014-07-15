@@ -38,9 +38,7 @@
 
 #include "config.h"
 #include "si406x.h"
-#include "si406x.c"
 #include "thor.h"
-#include "thor.c"
 
 
 uint8_t buf[60]; 
@@ -53,7 +51,7 @@ volatile int txj;
 uint32_t count=1;
 volatile boolean lockvariables = 0;
 uint8_t lock =0, sats = 0, hour = 0, minute = 0, second = 0;
-uint16_t temp;
+int16_t sitemp;
 uint8_t oldhour = 0, oldminute = 0, oldsecond = 0;
 int battv=0, navmode = 0, GPSerror = 0, lat_int=0,lon_int=0;
 int32_t lat = 0, lon = 0, alt = 0, maxalt = 0, lat_dec = 0, lon_dec =0;
@@ -168,7 +166,7 @@ void loop()
     wait(125);
     setupGPS();
   }
-  thor_wait();  
+  thor_wait(); 
   prepare_data();
   buildstring();
   thor_string(_txstring);
@@ -207,16 +205,12 @@ void sendUBX(uint8_t *MSG, uint8_t len) {
 }
 void buildstring()
 {
-  //temp=si_get_temp();
   if(alt>maxalt && sats >= 4)
   {
     maxalt=alt;
   }
-
-  snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%02x"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
-  lon_int,lon_dec,  maxalt,sats,battvaverage,errorstatus);
-
-
+  snprintf_P(_txstring, 80, PSTR("$$" CALLSIGN ",%li,%02d:%02d:%02d,%s%i.%05ld,%s%i.%05ld,%ld,%d,%i,%i,%i,%02x"), count++,hour, minute, second,  lat < 0 ? "-" : "",lat_int,lat_dec,lon < 0 ? "-" : "",
+  lon_int,lon_dec,  maxalt,sats,battvaverage,solarvaverage,sitemp/10,errorstatus);
   crccat(_txstring);
   maxalt=0;
 }
@@ -529,25 +523,23 @@ void prepare_data() {
   gps_check_lock();
   gps_get_position();
   gps_get_time();
-
+  sitemp=si_get_temperature(); 
   batteryadc_v=analogRead(BATTERY_ADC);
-  battv = batteryadc_v*2;
-//  solaradc_v=analogRead(SOLARPANEL_ADC);
-//  solarv = solaradc_v*5.6;
+  battv = float(batteryadc_v*5.7);
+  solaradc_v=analogRead(SOLARPANEL_ADC);
+  solarv = float(solaradc_v*1.92);
   battvsmooth[4] = battvsmooth[3];
   battvsmooth[3] = battvsmooth[2];
   battvsmooth[2] = battvsmooth[1];
   battvsmooth[1] = battvsmooth[0];
   battvsmooth[0] = battv;
   battvaverage = (battvsmooth[0]+battvsmooth[1]+ battvsmooth[2]+battvsmooth[3]+battvsmooth[4])/5;
-/*
   solarvsmooth[4] = solarvsmooth[3];
   solarvsmooth[3] = solarvsmooth[2];
   solarvsmooth[2] = solarvsmooth[1];
   solarvsmooth[1] = solarvsmooth[0];
   solarvsmooth[0] = solarv;
   solarvaverage = (solarvsmooth[0]+solarvsmooth[1]+ solarvsmooth[2]+solarvsmooth[3]+solarvsmooth[4])/5;
-*/
 
 }
 
@@ -605,114 +597,4 @@ uint16_t crccat(char *msg)
 
   return(x);
 }
-
-ISR(TIMER1_COMPA_vect)
-{
-  static uint16_t code;
-  static uint8_t tone = 0;
-  static uint8_t len = 0;
-  uint8_t i, bit_sh;
-
-  /* Transmit the tone */
-  si_set_channel(tone * THOR_DS);
-
-  if(_preamble)
-  {
-    tone = (tone + 2);
-    if(tone >= TONES) tone -= TONES;
-    _preamble--;
-    return;
-  }
-
-  /* Calculate the next tone */
-  bit_sh = 0;
-  for(i = 0; i < 2; i++)
-  {
-    uint8_t data;
-
-    /* Done sending the current varicode? */
-    if(!len)
-    {
-      if(_txlen)
-      {
-        /* Read the next character */
-        if(_txpgm == 0) data = *(_txbuf++);
-        else data = pgm_read_byte(_txbuf++);
-        _txlen--;
-      }
-      else data = 0;
-
-      /* Get the varicode for this character */
-      code = _thor_lookup_code(data, 0);
-      len  = code >> 12;
-    }
-
-    /* Feed the next bit into the convolutional encoder */
-    _conv_sh = (_conv_sh << 1) | ((code >> --len) & 1);
-    bit_sh = (bit_sh << 2)
-      | (_parity(_conv_sh & THOR_POLYA) << 1)
-        | _parity(_conv_sh & THOR_POLYB);
-  }
-
-  /* Add the new data to the interleaver */
-  _wtab(_inter_offset +   0, bit_sh & 0x08);
-  _wtab(_inter_offset +  41, bit_sh & 0x04);
-  _wtab(_inter_offset +  82, bit_sh & 0x02);
-  _wtab(_inter_offset + 123, bit_sh & 0x01);
-
-  /* Read next symbol to transmit from the interleaver */
-  bit_sh = _inter_table[_inter_offset >> 3];
-  if(_inter_offset & 7) bit_sh &= 0x0F;
-  else bit_sh >>= 4;
-
-  /* Shift the interleaver table offset forward */
-  _inter_offset = (_inter_offset + INTER_SIZE);
-  if(_inter_offset >= INTER_LEN) _inter_offset -= INTER_LEN;
-
-  /* Calculate the next tone */
-  tone = (tone + 2 + bit_sh);
-  if(tone >= TONES) tone -= TONES;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
