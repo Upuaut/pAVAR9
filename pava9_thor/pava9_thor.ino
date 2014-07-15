@@ -63,7 +63,7 @@ int errorstatus=8;
 /* 
  Bit 0 = GPS Error Condition Noted Switch to Max Performance Mode
  Bit 1 = GPS Error Condition Noted Cold Boot GPS
- Bit 2 = No used on pAVA
+ Bit 2 = Timeout Error when reading temp sensor.
  Bit 3 = Current Dynamic Model 0 = Flight 1 = Pedestrian
  Bit 4 = PSM Status 0 = PSM On 1 = PSM Off                   
  Bit 5 = Lock 0 = GPS Locked 1= Not Locked
@@ -530,7 +530,7 @@ void prepare_data() {
     }
     else
     {
-      errorstatus &= ~(1 << 3);
+      errorstatus &= ~(1 << 2);
       sitemp=sitempreading;
     }
   batteryadc_v=analogRead(BATTERY_ADC);
