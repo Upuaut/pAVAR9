@@ -8,7 +8,7 @@
 //#define RTTY
 //#define DOMINOEX
 
-#define CALLSIGN "NULL"
+#define CALLSIGN "SPAVA"
 
 // RTTY CONFIG
 #define ASCII 7          // ASCII 7 or 8
