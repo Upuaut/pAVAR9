@@ -526,17 +526,17 @@ void prepare_data() {
   sitempreading=si_get_temperature(); 
    if(sitempreading<-290)
     {
-     errorstatus |=(1 << 2);     
+     errorstatus &= ~(1 << 2);     
     }
     else
     {
-      errorstatus &= ~(1 << 2);
-      sitemp=sitempreading;
+     errorstatus |=(1 << 2);
+    sitemp=sitempreading;
     }
   batteryadc_v=analogRead(BATTERY_ADC);
   battv = float(batteryadc_v*5.7);
   solaradc_v=analogRead(SOLARPANEL_ADC);
-  solarv = float(solaradc_v*1.92);
+  solarv = float(solaradc_v*2.05);
   battvsmooth[4] = battvsmooth[3];
   battvsmooth[3] = battvsmooth[2];
   battvsmooth[2] = battvsmooth[1];
