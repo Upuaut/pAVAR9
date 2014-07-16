@@ -4,11 +4,11 @@
 #define __CONFIG_H__
 
 // RADIO CONFIG
-#define RADIO_FREQUENCY   434447350UL // Generally desired + 1350
+#define RADIO_FREQUENCY   434441350UL // Generally desired + 1350
 //#define RTTY
 //#define DOMINOEX
 
-#define CALLSIGN "SPAVA"
+#define CALLSIGN "WB8ELK-6"
 
 // RTTY CONFIG
 #define ASCII 7          // ASCII 7 or 8
