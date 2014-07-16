@@ -28,6 +28,10 @@ static uint8_t _preamble;
 static uint8_t _inter_table[INTER_BYTES];
 static uint16_t _inter_offset;
 
+/* RSID state */
+static uint8_t _rsid = 0;
+PROGMEM static const char _rsid_msg[] = THOR_RSID;
+
 /* Message being sent */
 volatile static uint8_t  _txpgm;
 volatile static uint8_t *_txbuf;
@@ -139,6 +143,7 @@ void thor_init(void)
 	_txbuf = NULL;
 	_txlen = 0;
 	_preamble = 16;
+	_rsid = 15;
 	
 	memset(_inter_table, 0, INTER_BYTES);
 	_inter_offset = 0;

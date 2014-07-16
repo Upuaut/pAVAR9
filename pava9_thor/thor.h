@@ -11,13 +11,18 @@ extern "C" {
 #if defined(THOR8)
   #define THOR_BAUDRATE 7.8125
   #define THOR_DS 1
+  #define THOR_RSID "\xF0\xB1\x48\xE6\x25\xA7\xDC\x09"
 #elif defined(THOR16)
   #define THOR_BAUDRATE 15.625
   #define THOR_DS 1
+  #define THOR_RSID "\xF0\xC0\x3A\xF5\x63\xC5\x99\x0A"
 #elif defined(THOR32)
   #define THOR_BAUDRATE 31.25
   #define THOR_DS 2
+  #define THOR_RSID "" /* This is not a standard mode, no RSID! */
 #endif
+
+#define RSID_BAUDRATE 10.7666
 
 #define THOR_K 7
 #define THOR_POLYA 0x6D

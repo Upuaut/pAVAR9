@@ -91,12 +91,13 @@ void setup() {
   digitalWrite(SHUTDOWN_SI406x_PIN, LOW);
   blinkled(2);
   si_init();
-  si_radio_on();
+  si_radio_off();
+  //si_radio_on();
 
   blinkled(2);
-  thor_init();
+  //thor_init();
 
-  thor_data_P(PSTR("\0\x0D\x02\x0D"), 4);
+  //thor_data_P(PSTR("\0\x0D\x02\x0D"), 4);
   blinkled(1);
 
 }
@@ -166,12 +167,46 @@ void loop()
     wait(125);
     setupGPS();
   }
-  thor_wait(); 
+  
+  /* Start the radio and transmit the string */
+  //thor_wait(); 
+  si_radio_on();
+  thor_init();
+  thor_data_P(PSTR("\0\x0D\x02\x0D\x0D"), 5);
+  
   prepare_data();
   buildstring();
+  
   thor_string(_txstring);
+  thor_string_P(PSTR("\n\n"));
+  
+  /* Finished sending the string. Turn the radio off */
+  thor_stop();
+  si_radio_off();
+  
+  /* Transmit an alternating tone for ~100 seconds */
+  for(int i = 0; i < 20; i++)
+  {
+    delay(5000);
+    generate_pip(i & 1);
+    
+    /* Double pips on the last two */
+    if(i >= 18)
+    {
+      delay(200);
+      generate_pip(i & 1);
+    }
+  }
+}
 
-}   
+void generate_pip(uint8_t high)
+{
+  /* The low and high tone represent the minimum and maximum frequency of the THOR signal */
+  si_set_offset(high ? 17 * 2 : 0);
+  si_radio_on();
+  delay(100);
+  si_radio_off();
+}
 
 void setupGPS() {
   //Turning off all GPS NMEA strings apart on the uBlox module

@@ -290,6 +290,13 @@ int16_t si_get_temperature()
 
   return(temp);
 }
+
+void si_set_global_xo_tune(uint8_t tune_value)
+{
+  uint8_t data[] = { 0x00, 0x01, 0x00, tune_value & 0x7F };
+  _send_command(CMD_SET_PROPERTY, data, sizeof(data));
+}
+
 void si_set_offset(int16_t offset)
 {
   uint8_t data[] = { 

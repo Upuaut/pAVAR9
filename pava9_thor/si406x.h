@@ -27,6 +27,7 @@ extern void si_radio_off(void);
 extern void si_set_frequency(uint32_t freq);
 extern void si_set_channel(uint8_t channel);
 extern void si_set_offset(int16_t offset);
+extern void si_set_global_xo_tune(uint8_t tune_value);
 extern int16_t si_get_temperature();
 
 #ifdef __cplusplus
